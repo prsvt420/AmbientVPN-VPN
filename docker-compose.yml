@@ -1,0 +1,33 @@
+name: ambientvpn_vpn
+
+services:
+  nginx:
+    build:
+      context: ./nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/certbot:/var/www/certbot
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./nginx/certbot:/var/www/certbot
+      - ./etc/letsencrypt/:/etc/letsencrypt/
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $$!; done;'"
+
+  3x-ui:
+    image: metaligh/3x-ui:latest
+    container_name: 3x-ui
+    hostname: host
+    volumes:
+      - $PWD/vpn_db/:/etc/x-ui/
+      - ./etc/letsencrypt/:/etc/letsencrypt/:rw
+    environment:
+      XRAY_VMESS_AEAD_FORCED: "false"
+    tty: true
+    network_mode: host
+    restart: unless-stopped
